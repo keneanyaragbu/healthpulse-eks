@@ -9,7 +9,7 @@ resources:
 
 images:
   - name: keneanyaragbu/healthpulse-backend
-    newTag: latest
+    newTag: v2-metrics
 
 patches:
   - target:

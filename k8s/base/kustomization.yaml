@@ -8,4 +8,5 @@ resources:
   - frontend/hpa.yaml
   - backend/deployment.yaml
   - backend/service.yaml
+  - backend/servicemonitor.yaml
   - backend/hpa.yaml

@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: healthpulse-backend
+  namespace: healthpulse
+  labels:
+    # REQUIRED. kube-prometheus-stack's operator only adopts ServiceMonitors
+    # carrying the release label of its Helm release. Omit it and Prometheus
+    # silently never scrapes the target — no error, just no data.
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: healthpulse-backend
+      app.kubernetes.io/component: backend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
