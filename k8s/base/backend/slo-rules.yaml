@@ -1,0 +1,107 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: healthpulse-slo
+  namespace: healthpulse
+  labels:
+    release: monitoring          # same adoption rule as ServiceMonitor
+spec:
+  groups:
+    # =========================================================
+    # RECORDING RULES — pre-compute the SLI at several windows.
+    # Dashboards and alerts read these instead of recomputing
+    # rate() over raw data on every refresh.
+    #
+    # Note the filters: probes and scrapes are excluded so the
+    # SLI reflects USER experience, not kubelet traffic.
+    # =========================================================
+    - name: healthpulse-sli
+      interval: 30s
+      rules:
+        - record: healthpulse:error_ratio:rate5m
+          expr: |
+            sum(rate(http_requests_total{service="healthpulse-backend",route!~"/api/health|/metrics",status_code=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{service="healthpulse-backend",route!~"/api/health|/metrics"}[5m]))
+
+        - record: healthpulse:error_ratio:rate30m
+          expr: |
+            sum(rate(http_requests_total{service="healthpulse-backend",route!~"/api/health|/metrics",status_code=~"5.."}[30m]))
+            /
+            sum(rate(http_requests_total{service="healthpulse-backend",route!~"/api/health|/metrics"}[30m]))
+
+        - record: healthpulse:error_ratio:rate1h
+          expr: |
+            sum(rate(http_requests_total{service="healthpulse-backend",route!~"/api/health|/metrics",status_code=~"5.."}[1h]))
+            /
+            sum(rate(http_requests_total{service="healthpulse-backend",route!~"/api/health|/metrics"}[1h]))
+
+        - record: healthpulse:error_ratio:rate6h
+          expr: |
+            sum(rate(http_requests_total{service="healthpulse-backend",route!~"/api/health|/metrics",status_code=~"5.."}[6h]))
+            /
+            sum(rate(http_requests_total{service="healthpulse-backend",route!~"/api/health|/metrics"}[6h]))
+
+        # Latency SLI: fraction of requests served UNDER 300ms.
+        # This is why the histogram has a 0.3 bucket.
+        - record: healthpulse:latency_good_ratio:rate5m
+          expr: |
+            sum(rate(http_request_duration_seconds_bucket{service="healthpulse-backend",route!~"/api/health|/metrics",le="0.3"}[5m]))
+            /
+            sum(rate(http_request_duration_seconds_count{service="healthpulse-backend",route!~"/api/health|/metrics"}[5m]))
+
+        # =====================================================
+        # BURN RATE = error ratio / error budget
+        # SLO 99.9% -> budget 0.001
+        # burn 1  = budget lasts exactly 30 days
+        # burn 14 = budget gone in ~2 days
+        # =====================================================
+        - record: healthpulse:burn_rate:5m
+          expr: healthpulse:error_ratio:rate5m / 0.001
+        - record: healthpulse:burn_rate:30m
+          expr: healthpulse:error_ratio:rate30m / 0.001
+        - record: healthpulse:burn_rate:1h
+          expr: healthpulse:error_ratio:rate1h / 0.001
+        - record: healthpulse:burn_rate:6h
+          expr: healthpulse:error_ratio:rate6h / 0.001
+
+    # =========================================================
+    # MULTI-WINDOW MULTI-BURN-RATE ALERTS
+    # Long window = is this real and sustained?
+    # Short window = is it STILL happening? (makes alerts resolve fast)
+    # Both must be true, which kills false pages from brief blips.
+    # =========================================================
+    - name: healthpulse-slo-alerts
+      rules:
+        - alert: HealthPulseErrorBudgetFastBurn
+          expr: |
+            healthpulse:burn_rate:1h > 14.4
+            and
+            healthpulse:burn_rate:5m > 14.4
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Fast error budget burn on healthpulse-backend"
+            description: "Burning 30-day budget in ~2 days. 1h burn {{ $value | printf \"%.1f\" }}x."
+
+        - alert: HealthPulseErrorBudgetSlowBurn
+          expr: |
+            healthpulse:burn_rate:6h > 6
+            and
+            healthpulse:burn_rate:30m > 6
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Slow error budget burn on healthpulse-backend"
+            description: "Sustained degradation. 6h burn {{ $value | printf \"%.1f\" }}x."
+
+        - alert: HealthPulseHighLatency
+          expr: healthpulse:latency_good_ratio:rate5m < 0.95
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Latency SLO breach"
+            description: "Only {{ $value | humanizePercentage }} of requests under 300ms."

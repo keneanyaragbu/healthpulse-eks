@@ -9,4 +9,5 @@ resources:
   - backend/deployment.yaml
   - backend/service.yaml
   - backend/servicemonitor.yaml
+  - backend/slo-rules.yaml
   - backend/hpa.yaml
