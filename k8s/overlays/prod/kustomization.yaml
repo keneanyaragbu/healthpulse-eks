@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+nameSuffix: -prod
+namespace: healthpulse-prod
+
+resources:
+  - ../../base
+
+images:
+  - name: keneanyaragbu/healthpulse-backend
+    newTag: latest
+
+patches:
+  - target:
+      kind: Namespace
+      name: healthpulse
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: healthpulse-prod
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: healthpulse-backend-hpa
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/maxReplicas
+        value: 8
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: healthpulse-web-hpa
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/maxReplicas
+        value: 8

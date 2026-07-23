@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: healthpulse-backend
+  namespace: healthpulse
+  labels:
+    app.kubernetes.io/name: healthpulse-backend
+    app.kubernetes.io/part-of: healthpulse-platform
+    app.kubernetes.io/component: backend
+    environment: dev
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: healthpulse-backend
+    app.kubernetes.io/component: backend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP

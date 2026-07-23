@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: healthpulse
+  labels:
+    app.kubernetes.io/name: healthpulse
+    app.kubernetes.io/part-of: healthpulse-platform
+    environment: dev

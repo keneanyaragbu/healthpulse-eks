@@ -8,9 +8,9 @@ output "cluster_endpoint" {
   value       = module.eks.cluster_endpoint
 }
 
-output "cluster_oidc_issuer_url" {
-  description = "OIDC issuer URL used for IRSA"
-  value       = module.eks.cluster_oidc_provider_arn
+output "oidc_provider_arn" {
+  description = "OIDC provider ARN — needed for IRSA trust policies"
+  value       = module.eks.oidc_provider_arn
 }
 
 output "vpc_id" {
