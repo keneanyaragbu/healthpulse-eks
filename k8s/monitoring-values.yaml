@@ -1,0 +1,75 @@
+# kube-prometheus-stack values
+#
+# Every component below carries BOTH:
+#   nodeSelector -> "put me on the monitoring nodes"
+#   tolerations  -> "I am allowed past the dedicated=monitoring taint"
+#
+# Without the toleration the pod is repelled by the taint and stays Pending.
+# Without the nodeSelector the pod could land on an apps node instead.
+
+prometheus:
+  prometheusSpec:
+    nodeSelector:
+      workload: monitoring
+    tolerations:
+      - key: dedicated
+        operator: Equal
+        value: monitoring
+        effect: NoSchedule
+    retention: 6h
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+      limits:
+        memory: 2Gi
+
+grafana:
+  adminPassword: healthpulse123
+  nodeSelector:
+    workload: monitoring
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector:
+      workload: monitoring
+    tolerations:
+      - key: dedicated
+        operator: Equal
+        value: monitoring
+        effect: NoSchedule
+
+kube-state-metrics:
+  nodeSelector:
+    workload: monitoring
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+
+prometheusOperator:
+  nodeSelector:
+    workload: monitoring
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: monitoring
+      effect: NoSchedule
+
+# node-exporter is a DaemonSet — it must run on EVERY node, including the
+# tainted one, so it tolerates everything.
+prometheus-node-exporter:
+  tolerations:
+    - operator: Exists
