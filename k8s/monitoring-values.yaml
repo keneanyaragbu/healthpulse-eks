@@ -26,6 +26,10 @@ prometheus:
 
 grafana:
   adminPassword: healthpulse123
+  grafana.ini:
+    server:
+      root_url: "http://grafana.local"
+      serve_from_sub_path: false
   nodeSelector:
     workload: monitoring
   tolerations:

@@ -26,6 +26,9 @@ helm upgrade --install monitoring \
   -f "${REPO_ROOT}/k8s/monitoring-values.yaml" \
   --wait --timeout 10m
 
+echo "==> Applying Grafana ingress"
+kubectl apply -f "${REPO_ROOT}/k8s/grafana-ingress.yaml"
+
 echo "==> Installing ArgoCD"
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -n argocd --server-side -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
