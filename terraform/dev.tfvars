@@ -3,7 +3,7 @@ project_name = "healthpulse"
 environment  = "dev"
 
 vpc_cidr        = "10.50.0.0/16"
-cluster_version = "1.33"
+cluster_version = "1.34"
 
 apps_instance_type = "t3.medium"
 apps_min_size      = 2

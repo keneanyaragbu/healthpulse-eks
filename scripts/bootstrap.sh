@@ -30,6 +30,28 @@ echo "==> Installing ArgoCD"
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -n argocd --server-side -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl rollout status deployment argocd-server -n argocd --timeout=300s
+kubectl apply -f "${REPO_ROOT}/argocd/healthpulse-dev.yaml"
+
+
+echo "==> Installing AWS Load Balancer Controller (IRSA role from Terraform)"
+LBC_ROLE_ARN=$(cd "${REPO_ROOT}/terraform" && terraform output -raw lbc_role_arn)
+VPC_ID=$(cd "${REPO_ROOT}/terraform" && terraform output -raw vpc_id)
+
+kubectl create serviceaccount aws-load-balancer-controller -n kube-system \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl annotate serviceaccount aws-load-balancer-controller -n kube-system \
+  eks.amazonaws.com/role-arn="${LBC_ROLE_ARN}" --overwrite
+
+helm repo add eks https://aws.github.io/eks-charts >/dev/null 2>&1 || true
+helm repo update >/dev/null
+helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  --namespace kube-system \
+  --set clusterName="${CLUSTER_NAME}" \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller \
+  --set region="${REGION}" \
+  --set vpcId="${VPC_ID}" \
+  --wait --timeout 5m
 
 echo ""
 echo "==================== READY ===================="
